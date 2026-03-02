@@ -1,6 +1,13 @@
-import type { ApiResponse, AuthResponse, DocumentDetails, HistoryItem, UploadResult } from "./types";
+import type {
+  AdminStats,
+  ApiResponse,
+  AuthResponse,
+  DocumentDetails,
+  HistoryItem,
+  UploadResult
+} from "./types";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:5000/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:5050/api";
 
 const toErrorMessage = async (response: Response) => {
   try {
@@ -68,5 +75,14 @@ export const api = {
     });
 
     return parseResponse<DocumentDetails>(response);
+  },
+
+  async getAdminStats(token: string) {
+    const response = await fetch(`${API_BASE_URL}/admin/stats`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    return parseResponse<AdminStats>(response);
   }
 };

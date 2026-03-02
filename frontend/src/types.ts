@@ -32,6 +32,14 @@ export type DocumentDetails = {
   createdAt: string;
 };
 
+export type AdminStats = {
+  usersCount: number;
+  documentsCount: number;
+  flaggedDocumentsCount: number;
+  fingerprintsCount: number;
+  averageSimilarity: number;
+};
+
 export type ApiResponse<T> = {
   success: boolean;
   message: string;

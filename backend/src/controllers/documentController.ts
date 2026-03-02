@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import {
+  getAdminStats,
   getDocumentByIdForUser,
   getFlaggedDocumentsReport,
   getUserDocumentHistory,
@@ -63,5 +64,14 @@ export const flaggedController = async (_req: Request, res: Response) => {
     success: true,
     message: "Flagged report fetched successfully",
     data: report
+  });
+};
+
+export const adminStatsController = async (_req: Request, res: Response) => {
+  const stats = await getAdminStats();
+  res.status(200).json({
+    success: true,
+    message: "Admin stats fetched successfully",
+    data: stats
   });
 };

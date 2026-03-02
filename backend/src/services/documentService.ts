@@ -12,6 +12,13 @@ import {
   getFingerprintsByDocumentIds,
   insertFingerprints
 } from "../models/fingerprintModel";
+import {
+  getAverageSimilarity,
+  getDocumentsCount,
+  getFingerprintsCount,
+  getFlaggedDocumentsCount,
+  getUsersCount
+} from "../models/adminModel";
 import { AppError } from "../utils/AppError";
 import { getContentHash } from "../utils/crypto";
 import { generateFingerprintHashes, getJaccardSimilarity } from "../utils/textProcessing";
@@ -117,4 +124,23 @@ export const getFlaggedDocumentsReport = async () => {
     matchedDocumentId: doc.matched_document_id,
     createdAt: doc.created_at
   }));
+};
+
+export const getAdminStats = async () => {
+  const [usersCount, documentsCount, flaggedDocumentsCount, fingerprintsCount, averageSimilarity] =
+    await Promise.all([
+      getUsersCount(),
+      getDocumentsCount(),
+      getFlaggedDocumentsCount(),
+      getFingerprintsCount(),
+      getAverageSimilarity()
+    ]);
+
+  return {
+    usersCount,
+    documentsCount,
+    flaggedDocumentsCount,
+    fingerprintsCount,
+    averageSimilarity
+  };
 };

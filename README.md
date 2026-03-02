@@ -156,6 +156,7 @@ Frontend runs on `http://localhost:5180` by default.
 ### Admin (JWT required)
 
 - `GET /api/admin/flagged`
+- `GET /api/admin/stats`
 
 ## Sample Resume Bullet Points
 

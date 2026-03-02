@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  adminStatsController,
   flaggedController,
   getDocumentController,
   historyController,
@@ -24,5 +25,6 @@ documentRouter.get("/:id", authenticate, asyncHandler(getDocumentController));
 
 const adminRouter = Router();
 adminRouter.get("/flagged", authenticate, asyncHandler(flaggedController));
+adminRouter.get("/stats", authenticate, asyncHandler(adminStatsController));
 
 export { adminRouter, documentRouter };

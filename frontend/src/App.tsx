@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { api } from "./api";
-import type { DocumentDetails, HistoryItem, UploadResult } from "./types";
+import type { AdminStats, DocumentDetails, HistoryItem, UploadResult } from "./types";
 
 function App() {
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -11,6 +11,7 @@ function App() {
   const [currentEmail, setCurrentEmail] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [latestResult, setLatestResult] = useState<UploadResult | null>(null);
+  const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<DocumentDetails | null>(null);
   const [loading, setLoading] = useState(false);
@@ -42,6 +43,8 @@ function App() {
       setPassword("");
       const fetchedHistory = await api.getHistory(data.token);
       setHistory(fetchedHistory);
+      const fetchedStats = await api.getAdminStats(data.token);
+      setAdminStats(fetchedStats);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed");
     } finally {
@@ -65,6 +68,8 @@ function App() {
       setMessage("Document analyzed successfully");
       const fetchedHistory = await api.getHistory(token);
       setHistory(fetchedHistory);
+      const fetchedStats = await api.getAdminStats(token);
+      setAdminStats(fetchedStats);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -95,6 +100,7 @@ function App() {
     setToken(null);
     setCurrentEmail("");
     setHistory([]);
+    setAdminStats(null);
     setSelectedDocument(null);
     setLatestResult(null);
     setMessage("Logged out");
@@ -178,6 +184,37 @@ function App() {
               </button>
             </form>
           </section>
+
+          {adminStats ? (
+            <section className="card">
+              <div className="row-between">
+                <h2>Database Stats</h2>
+                <span className="muted">Live from PostgreSQL</span>
+              </div>
+              <div className="metrics">
+                <article>
+                  <span>Users</span>
+                  <strong>{adminStats.usersCount}</strong>
+                </article>
+                <article>
+                  <span>Documents</span>
+                  <strong>{adminStats.documentsCount}</strong>
+                </article>
+                <article>
+                  <span>Flagged Docs</span>
+                  <strong>{adminStats.flaggedDocumentsCount}</strong>
+                </article>
+                <article>
+                  <span>Total Fingerprints</span>
+                  <strong>{adminStats.fingerprintsCount}</strong>
+                </article>
+                <article>
+                  <span>Average Similarity</span>
+                  <strong>{adminStats.averageSimilarity}%</strong>
+                </article>
+              </div>
+            </section>
+          ) : null}
 
           {latestResult ? (
             <section className="card">
