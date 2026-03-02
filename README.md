@@ -45,6 +45,62 @@ palagarism-check/
     src/
 ```
 
+## PostgreSQL Setup (Windows, from scratch)
+
+Use this section if PostgreSQL is not installed yet.
+
+1. Download PostgreSQL 16 (free):
+   - Open: https://www.postgresql.org/download/windows/
+   - Click **Download the installer** (EnterpriseDB)
+2. Run installer and select:
+   - Components: **PostgreSQL Server**, **Command Line Tools**, **pgAdmin**
+   - Port: `5432`
+   - Superuser: `postgres`
+   - Set your password (example used below: `postgres`)
+3. Finish installation.
+4. Verify install in a new PowerShell:
+   ```powershell
+   psql --version
+   ```
+5. If `psql` is not recognized, add this to PATH (adjust version if needed):
+   - `C:\Program Files\PostgreSQL\16\bin`
+   - Restart terminal and re-run `psql --version`
+
+## Create DB and connect project
+
+From project root:
+
+```powershell
+cd backend
+copy .env.example .env
+```
+
+Open `.env` and set your DB password in `DATABASE_URL`:
+
+```env
+DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/plagiarism_checker
+```
+
+Create database:
+
+```powershell
+psql -U postgres -h localhost -c "CREATE DATABASE plagiarism_checker;"
+```
+
+Apply schema:
+
+```powershell
+psql "postgresql://postgres:YOUR_PASSWORD@localhost:5432/plagiarism_checker" -f .\sql\schema.sql
+```
+
+Quick validation:
+
+```powershell
+psql "postgresql://postgres:YOUR_PASSWORD@localhost:5432/plagiarism_checker" -c "\dt"
+```
+
+You should see: `users`, `documents`, `fingerprints`.
+
 ## Backend Setup
 
 1. Open terminal:
@@ -65,7 +121,7 @@ palagarism-check/
    npm run dev
    ```
 
-Backend runs on `http://localhost:5000` by default.
+Backend runs on `http://localhost:5050` by default.
 
 ## Frontend Setup
 
@@ -82,7 +138,7 @@ Backend runs on `http://localhost:5000` by default.
    npm run dev
    ```
 
-Frontend runs on `http://localhost:5173` by default.
+Frontend runs on `http://localhost:5180` by default.
 
 ## API Endpoints
 

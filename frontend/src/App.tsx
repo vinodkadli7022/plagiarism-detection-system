@@ -182,6 +182,11 @@ function App() {
           {latestResult ? (
             <section className="card">
               <h2>Latest Analysis Result</h2>
+              <p className="match-highlight">
+                {latestResult.matchedDocumentId
+                  ? `Matched with Doc #${latestResult.matchedDocumentId} at ${latestResult.similarityScore}% similarity`
+                  : "No significant match found in existing documents"}
+              </p>
               <div className="metrics">
                 <article>
                   <span>Similarity</span>
@@ -189,7 +194,13 @@ function App() {
                 </article>
                 <article>
                   <span>Status</span>
-                  <strong>{latestResult.flagged ? "Flagged" : "Clean"}</strong>
+                  <strong>
+                    <span
+                      className={`status-badge ${latestResult.flagged ? "flagged" : "clean"}`}
+                    >
+                      {latestResult.flagged ? "Flagged" : "Clean"}
+                    </span>
+                  </strong>
                 </article>
                 <article>
                   <span>Matched Doc</span>
@@ -218,7 +229,12 @@ function App() {
                   >
                     <span>Doc #{item.id}</span>
                     <span>{item.similarityScore}%</span>
-                    <span>{item.flagged ? "Flagged" : "Clean"}</span>
+                    <span>
+                      <span className={`status-badge ${item.flagged ? "flagged" : "clean"}`}>
+                        {item.flagged ? "Flagged" : "Clean"}
+                      </span>
+                    </span>
+                    <span>Match: {item.matchedDocumentId ? `Doc #${item.matchedDocumentId}` : "N/A"}</span>
                     <span>{new Date(item.createdAt).toLocaleString()}</span>
                   </button>
                 ))}
