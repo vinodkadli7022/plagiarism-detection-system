@@ -184,10 +184,14 @@ function App() {
   }, [history, searchText]);
 
   const dashboardCards = useMemo(() => {
-    const totalDocs = adminStats?.documentsCount ?? history.length;
-    const flagged = adminStats?.flaggedDocumentsCount ?? history.filter((item) => item.flagged).length;
+    // Always use the current user's own history — adminStats is global (all users)
+    const totalDocs = history.length;
+    const flagged = history.filter((item) => item.flagged || item.similarityScore >= 40).length;
     const clean = Math.max(totalDocs - flagged, 0);
-    const avgSimilarity = adminStats?.averageSimilarity ?? 0;
+    const avgSimilarity =
+      totalDocs > 0
+        ? parseFloat((history.reduce((sum, item) => sum + item.similarityScore, 0) / totalDocs).toFixed(2))
+        : 0;
 
     const avgProcessingSeconds = Math.max(avgSimilarity / 10, 1.2).toFixed(1);
 
@@ -198,7 +202,7 @@ function App() {
       avgSimilarity,
       avgProcessingTime: `${avgProcessingSeconds}s`
     };
-  }, [adminStats, history]);
+  }, [history]);
 
   const recentUploads = useMemo(() => history.slice(0, 4), [history]);
 
@@ -683,7 +687,7 @@ function App() {
                     <div><span>Plan</span><strong>{currentUser?.plan ?? "Free"}</strong></div>
                     <div><span>Total Scans</span><strong>{history.length}</strong></div>
                     <div><span>Flagged Documents</span><strong>{history.filter((item) => item.flagged).length}</strong></div>
-                    <div><span>Avg Similarity</span><strong>{adminStats?.averageSimilarity ?? 0}%</strong></div>
+                    <div><span>Avg Similarity</span><strong>{dashboardCards.avgSimilarity}%</strong></div>
                     <div><span>Total Fingerprints</span><strong>{adminStats?.fingerprintsCount ?? 0}</strong></div>
                   </div>
                 </article>
