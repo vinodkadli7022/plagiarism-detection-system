@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS documents (
   user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   original_text TEXT NOT NULL,
   cleaned_text TEXT NOT NULL,
-  content_hash VARCHAR(64) UNIQUE NOT NULL,
+  content_hash VARCHAR(64) NOT NULL,
   similarity_score FLOAT DEFAULT 0,
   matched_document_id INT REFERENCES documents(id) ON DELETE SET NULL,
   is_flagged BOOLEAN DEFAULT FALSE,
