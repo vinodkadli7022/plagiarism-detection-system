@@ -2,8 +2,18 @@ export type AuthResponse = {
   user: {
     id: number;
     email: string;
+    displayName: string;
+    plan: string;
   };
   token: string;
+};
+
+export type UserProfile = {
+  id: number;
+  email: string;
+  displayName: string;
+  plan: string;
+  createdAt: string;
 };
 
 export type UploadResult = {

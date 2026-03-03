@@ -4,6 +4,7 @@ import type {
   AuthResponse,
   DocumentDetails,
   HistoryItem,
+  UserProfile,
   UploadResult
 } from "./types";
 
@@ -84,5 +85,43 @@ export const api = {
     });
 
     return parseResponse<AdminStats>(response);
+  },
+
+  async getProfile(token: string) {
+    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    return parseResponse<UserProfile>(response);
+  },
+
+  async updateProfile(token: string, payload: { displayName: string; plan: string }) {
+    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    return parseResponse<UserProfile>(response);
+  },
+
+  async changePassword(
+    token: string,
+    payload: { currentPassword: string; newPassword: string; confirmPassword: string }
+  ) {
+    const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    return parseResponse<{ success: boolean }>(response);
   }
 };

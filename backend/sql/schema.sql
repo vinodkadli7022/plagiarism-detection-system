@@ -2,8 +2,14 @@ CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   email VARCHAR(255) UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
+  display_name VARCHAR(120),
+  plan VARCHAR(32) NOT NULL DEFAULT 'Premium',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(120);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS plan VARCHAR(32) NOT NULL DEFAULT 'Premium';
+UPDATE users SET display_name = split_part(email, '@', 1) WHERE display_name IS NULL;
 
 CREATE TABLE IF NOT EXISTS documents (
   id SERIAL PRIMARY KEY,
