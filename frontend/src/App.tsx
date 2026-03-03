@@ -13,7 +13,7 @@ const formatDisplayName = (emailValue: string, fallback?: string) => {
   return base.replace(/[._-]/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
-const formatDocName = (id: number) => `document_${id}.txt`;
+const formatDocName = (userIndex: number) => `document_${userIndex}.txt`;
 
 const getStatusLabel = (item: HistoryItem) => {
   if (item.flagged || item.similarityScore >= 50) {
@@ -167,6 +167,18 @@ function App() {
     resetAlerts();
   };
 
+  // Map each document's DB id → user-relative sequential number (1, 2, 3…)
+  const docIndexMap = useMemo(() => {
+    const sorted = [...history].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+    const map = new Map<number, number>();
+    sorted.forEach((item, idx) => map.set(item.id, idx + 1));
+    return map;
+  }, [history]);
+
+  const getDocIndex = (id: number) => docIndexMap.get(id) ?? id;
+
   const filteredHistory = useMemo(() => {
     if (!searchText.trim()) {
       return history;
@@ -174,14 +186,14 @@ function App() {
 
     const lower = searchText.toLowerCase();
     return history.filter((item) => {
-      const name = formatDocName(item.id).toLowerCase();
+      const name = formatDocName(getDocIndex(item.id)).toLowerCase();
       return (
         name.includes(lower) ||
         `#${item.id}`.includes(lower) ||
         getStatusLabel(item).toLowerCase().includes(lower)
       );
     });
-  }, [history, searchText]);
+  }, [history, searchText, docIndexMap]);
 
   const dashboardCards = useMemo(() => {
     // Always use the current user's own history — adminStats is global (all users)
@@ -469,7 +481,7 @@ function App() {
                                 <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm9 1.586V6a1 1 0 001 1h.414L13 5.586z" clipRule="evenodd"/></svg>
                               </span>
                               <div className="upload-item-meta">
-                                <strong>{formatDocName(doc.id)}</strong>
+                                <strong>{formatDocName(getDocIndex(doc.id))}</strong>
                                 <small>{new Date(doc.createdAt).toLocaleString()}</small>
                               </div>
                               <div className="upload-item-right">
@@ -600,7 +612,7 @@ function App() {
                             return (
                               <tr key={item.id}>
                                 <td>#{item.id}</td>
-                                <td>{formatDocName(item.id)}</td>
+                                <td>{formatDocName(getDocIndex(item.id))}</td>
                                 <td>{new Date(item.createdAt).toLocaleDateString()}</td>
                                 <td>
                                   <div className="score-cell">
@@ -638,7 +650,7 @@ function App() {
                 ) : (
                   <>
                     <article className="card">
-                      <h2>{formatDocName(selectedDocument.id)}</h2>
+                      <h2>{formatDocName(getDocIndex(selectedDocument.id))}</h2>
                       <div className="report-grid">
                         <div>
                           <span>Similarity Score</span>
