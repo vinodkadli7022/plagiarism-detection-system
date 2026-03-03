@@ -37,10 +37,10 @@ export const processAndStoreDocument = async (
   originalText: string
 ): Promise<UploadResult> => {
   const contentHash = getContentHash(originalText);
-  const duplicate = await findDocumentByContentHash(contentHash);
+  const duplicate = await findDocumentByContentHash(contentHash, userId);
 
   if (duplicate) {
-    throw new AppError("Duplicate document upload detected", 409);
+    throw new AppError("You have already uploaded this document before", 409);
   }
 
   const { cleanedText, wordsCount, hashes } = generateFingerprintHashes(originalText, env.kGramSize);

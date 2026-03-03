@@ -22,14 +22,15 @@ type CreateDocumentPayload = {
   isFlagged: boolean;
 };
 
-export const findDocumentByContentHash = async (contentHash: string) => {
+export const findDocumentByContentHash = async (contentHash: string, userId: number) => {
   const query = `
     SELECT id, user_id, original_text, cleaned_text, content_hash, similarity_score, matched_document_id, is_flagged, created_at
     FROM documents
     WHERE content_hash = $1
+      AND user_id = $2
     LIMIT 1
   `;
-  const result = await pool.query<DocumentRecord>(query, [contentHash]);
+  const result = await pool.query<DocumentRecord>(query, [contentHash, userId]);
   return result.rows[0] ?? null;
 };
 
