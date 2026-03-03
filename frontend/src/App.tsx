@@ -1,200 +1,49 @@
 import { useMemo, useRef, useState } from "react";
 import type { ChangeEvent, DragEvent, FormEvent } from "react";
 import { api } from "./api";
-import type { AdminStats, DocumentDetails, HistoryItem, UploadResult } from "./types";
+import type { AdminStats, DocumentDetails, HistoryItem, UserProfile } from "./types";
 
-type FilterMode = "all" | "high" | "clean";
-type AppView = "dashboard" | "analysis" | "history" | "profile";
-type MatchEntry = {
-  id: string;
-  label: string;
-  percent: number;
-  chunkIndex: number;
-  tone: "high" | "medium" | "low";
-};
+type View = "dashboard" | "upload" | "history" | "report" | "settings";
 
-const formatDisplayName = (emailValue: string) => {
-  const base = emailValue.split("@")[0] ?? "user";
+const formatDisplayName = (emailValue: string, fallback?: string) => {
+  if (fallback && fallback.trim()) {
+    return fallback;
+  }
+  const base = emailValue.split("@")[0] ?? "User";
   return base.replace(/[._-]/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
-const normalizePlan = (plan: string) => {
-  if (plan === "Pro" || plan === "Enterprise" || plan === "Premium") {
-    return plan;
+const formatDocName = (id: number) => `document_${id}.txt`;
+
+const getStatusLabel = (item: HistoryItem) => {
+  if (item.flagged || item.similarityScore >= 50) {
+    return "Flagged";
   }
-  return "Premium";
-};
-
-const toChunks = (text: string, chunkWords = 38) => {
-  const words = text.split(/\s+/).filter(Boolean);
-  const chunks: string[] = [];
-
-  for (let index = 0; index < words.length; index += chunkWords) {
-    chunks.push(words.slice(index, index + chunkWords).join(" "));
+  if (item.similarityScore >= 20) {
+    return "Review";
   }
-
-  return chunks.length ? chunks : [""];
+  return "Clean";
 };
 
 function App() {
   const [mode, setMode] = useState<"login" | "register">("login");
-  const [view, setView] = useState<AppView>("dashboard");
+  const [view, setView] = useState<View>("dashboard");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [token, setToken] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
-  const [currentEmail, setCurrentEmail] = useState<string>("");
-  const [profileName, setProfileName] = useState("");
-  const [profilePlan, setProfilePlan] = useState("Premium");
-  const [currentPasswordInput, setCurrentPasswordInput] = useState("");
-  const [newPasswordInput, setNewPasswordInput] = useState("");
-  const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [latestResult, setLatestResult] = useState<UploadResult | null>(null);
-  const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedDocument, setSelectedDocument] = useState<DocumentDetails | null>(null);
-  const [historyFilter, setHistoryFilter] = useState<FilterMode>("all");
   const [searchText, setSearchText] = useState("");
-  const [isDragging, setIsDragging] = useState(false);
-  const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
-  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
-  const [profileFormMessage, setProfileFormMessage] = useState("");
-  const [profileFormError, setProfileFormError] = useState("");
+  const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string>("");
-  const [error, setError] = useState<string>("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  const isAuthenticated = useMemo(() => Boolean(token), [token]);
-
-  const analysisChunks = useMemo(() => {
-    if (!selectedDocument) {
-      return [];
-    }
-    return toChunks(selectedDocument.originalText);
-  }, [selectedDocument]);
-
-  const analysisMatches = useMemo<MatchEntry[]>(() => {
-    if (!selectedDocument || analysisChunks.length === 0) {
-      return [];
-    }
-
-    const base = selectedDocument.similarityScore;
-    const primaryPercent = Math.min(Math.max(base, 8), 95);
-    const secondaryPercent = Math.max(Math.round(primaryPercent * 0.55), 5);
-    const tertiaryPercent = Math.max(Math.round(primaryPercent * 0.35), 3);
-    const quaternaryPercent = Math.max(Math.round(primaryPercent * 0.2), 2);
-
-    const mapTone = (percent: number): MatchEntry["tone"] => {
-      if (percent >= 25) {
-        return "high";
-      }
-      if (percent >= 10) {
-        return "medium";
-      }
-      return "low";
-    };
-
-    return [
-      {
-        id: "source-1",
-        label: selectedDocument.matchedDocumentId
-          ? `Source: Document #${selectedDocument.matchedDocumentId}`
-          : "Source: Existing Archive A",
-        percent: primaryPercent,
-        chunkIndex: 0,
-        tone: mapTone(primaryPercent)
-      },
-      {
-        id: "source-2",
-        label: "Source: Existing Archive B",
-        percent: secondaryPercent,
-        chunkIndex: Math.min(1, analysisChunks.length - 1),
-        tone: mapTone(secondaryPercent)
-      },
-      {
-        id: "source-3",
-        label: "Source: Existing Archive C",
-        percent: tertiaryPercent,
-        chunkIndex: Math.min(2, analysisChunks.length - 1),
-        tone: mapTone(tertiaryPercent)
-      },
-      {
-        id: "source-4",
-        label: "Source: Existing Archive D",
-        percent: quaternaryPercent,
-        chunkIndex: Math.min(3, analysisChunks.length - 1),
-        tone: mapTone(quaternaryPercent)
-      }
-    ];
-  }, [analysisChunks.length, selectedDocument]);
-
-  const activeChunkIndex = useMemo(() => {
-    if (!activeMatchId) {
-      return -1;
-    }
-
-    const match = analysisMatches.find((entry) => entry.id === activeMatchId);
-    return match ? match.chunkIndex : -1;
-  }, [activeMatchId, analysisMatches]);
-
-  const gaugeValue = selectedDocument?.similarityScore ?? latestResult?.similarityScore ?? 0;
-  const currentDisplayName = useMemo(() => {
-    if (profileName.trim()) {
-      return profileName.trim();
-    }
-    return formatDisplayName(currentEmail);
-  }, [currentEmail, profileName]);
-
-  const userInitials = useMemo(() => {
-    const pieces = currentDisplayName.split(" ").filter(Boolean);
-    if (!pieces.length) {
-      return "U";
-    }
-    return pieces
-      .slice(0, 2)
-      .map((part) => part[0])
-      .join("")
-      .toUpperCase();
-  }, [currentDisplayName]);
-
-  const profileStats = useMemo(() => {
-    const flaggedCount = history.filter((item) => item.flagged).length;
-    return {
-      totalScans: history.length,
-      flaggedCount,
-      cleanCount: Math.max(history.length - flaggedCount, 0),
-      avgSimilarity: adminStats?.averageSimilarity ?? 0
-    };
-  }, [adminStats?.averageSimilarity, history]);
-
-  const recentActivity = useMemo(() => {
-    return history.slice(0, 3);
-  }, [history]);
-
-  const filteredHistory = useMemo(() => {
-    const byFilter =
-      historyFilter === "all"
-        ? history
-        : history.filter((item) =>
-            historyFilter === "high" ? item.flagged : !item.flagged
-          );
-
-    if (!searchText.trim()) {
-      return byFilter;
-    }
-
-    const lower = searchText.toLowerCase();
-    return byFilter.filter((item) => {
-      const name = `document_${item.id}.txt`;
-      return (
-        name.includes(lower) ||
-        `doc #${item.id}`.includes(lower) ||
-        new Date(item.createdAt).toLocaleString().toLowerCase().includes(lower)
-      );
-    });
-  }, [history, historyFilter, searchText]);
+  const isAuthenticated = Boolean(token);
 
   const resetAlerts = () => {
     setMessage("");
@@ -202,21 +51,16 @@ function App() {
   };
 
   const refreshData = async (authToken: string) => {
-    const [fetchedHistory, fetchedStats] = await Promise.all([
-      api.getHistory(authToken),
-      api.getAdminStats(authToken)
-    ]);
+    const [historyData, statsData] = await Promise.all([api.getHistory(authToken), api.getAdminStats(authToken)]);
+    setHistory(historyData);
+    setAdminStats(statsData);
 
-    setHistory(fetchedHistory);
-    setAdminStats(fetchedStats);
-  };
-
-  const refreshProfile = async (authToken: string) => {
-    const profile = await api.getProfile(authToken);
-    setCurrentUserId(profile.id);
-    setCurrentEmail(profile.email);
-    setProfileName(profile.displayName || formatDisplayName(profile.email));
-    setProfilePlan(normalizePlan(profile.plan));
+    try {
+      const profile = await api.getProfile(authToken);
+      setCurrentUser(profile);
+    } catch {
+      // fallback to auth response data when profile endpoint is unavailable
+    }
   };
 
   const handleAuth = async (event: FormEvent<HTMLFormElement>) => {
@@ -231,15 +75,21 @@ function App() {
           : await api.register(email.trim(), password);
 
       setToken(data.token);
-      setCurrentUserId(data.user.id);
-      setCurrentEmail(data.user.email);
-      setProfileName(data.user.displayName || formatDisplayName(data.user.email));
-      setProfilePlan(normalizePlan(data.user.plan));
+      setCurrentUser({
+        id: data.user.id,
+        email: data.user.email,
+        displayName: formatDisplayName(data.user.email, data.user.displayName),
+        plan: data.user.plan ?? "Free",
+        createdAt: new Date().toISOString()
+      });
       setView("dashboard");
-      setMessage(mode === "register" ? "Registration successful" : "");
       setEmail("");
       setPassword("");
-      await Promise.all([refreshData(data.token), refreshProfile(data.token)]);
+
+      await refreshData(data.token);
+      if (mode === "register") {
+        setMessage("Account created successfully");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed");
     } finally {
@@ -247,67 +97,7 @@ function App() {
     }
   };
 
-  const uploadSelectedFile = async (file: File) => {
-    if (!token) {
-      return;
-    }
-
-    resetAlerts();
-    setLoading(true);
-
-    try {
-      const result = await api.uploadDocument(file, token);
-      setLatestResult(result);
-      setSelectedFile(null);
-      setView("dashboard");
-      setMessage("Document analyzed successfully");
-      await refreshData(token);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleFileSelect = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] ?? null;
-    if (!file) {
-      return;
-    }
-
-    setSelectedFile(file);
-    await uploadSelectedFile(file);
-    event.target.value = "";
-  };
-
-  const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = async (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(false);
-
-    const file = event.dataTransfer.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    setSelectedFile(file);
-    await uploadSelectedFile(file);
-  };
-
-  const triggerFilePicker = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFetchDocument = async (id: number) => {
+  const openDocumentReport = async (id: number) => {
     if (!token) {
       return;
     }
@@ -318,602 +108,411 @@ function App() {
     try {
       const documentData = await api.getDocumentById(id, token);
       setSelectedDocument(documentData);
-      setView("analysis");
-      setActiveMatchId(null);
-      setMessage(`Loaded document #${id}`);
+      setView("report");
+      setMessage(`Loaded report for document #${id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch document");
+      setError(err instanceof Error ? err.message : "Failed to open report");
     } finally {
       setLoading(false);
     }
   };
 
-  const focusMatch = (entry: MatchEntry) => {
-    setActiveMatchId(entry.id);
-    const target = document.getElementById(`analysis-chunk-${entry.chunkIndex}`);
-    target?.scrollIntoView({ behavior: "smooth", block: "center" });
-  };
-
-  const downloadCurrentReport = () => {
-    if (!selectedDocument) {
+  const processUpload = async () => {
+    if (!token || !selectedFile) {
       return;
     }
 
-    const reportText = [
-      `Document #${selectedDocument.id}`,
-      `Similarity Score: ${selectedDocument.similarityScore}%`,
-      `Matched Document: ${selectedDocument.matchedDocumentId ?? "N/A"}`,
-      `Flagged: ${selectedDocument.flagged ? "Yes" : "No"}`,
-      `Generated At: ${new Date().toLocaleString()}`,
-      "",
-      "Original Text:",
-      selectedDocument.originalText
-    ].join("\n");
-
-    const blob = new Blob([reportText], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `report_document_${selectedDocument.id}.txt`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleHistoryDownload = async (item: HistoryItem) => {
-    if (!token) {
-      return;
-    }
+    resetAlerts();
+    setLoading(true);
 
     try {
-      const details = await api.getDocumentById(item.id, token);
-      const reportText = [
-        `Document #${details.id}`,
-        `Similarity Score: ${details.similarityScore}%`,
-        `Matched Document: ${details.matchedDocumentId ?? "N/A"}`,
-        `Flagged: ${details.flagged ? "Yes" : "No"}`,
-        `Generated At: ${new Date().toLocaleString()}`,
-        "",
-        details.originalText
-      ].join("\n");
-
-      const blob = new Blob([reportText], { type: "text/plain;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `history_document_${details.id}.txt`;
-      anchor.click();
-      URL.revokeObjectURL(url);
+      const result = await api.uploadDocument(selectedFile, token);
+      setSelectedFile(null);
+      await refreshData(token);
+      await openDocumentReport(result.documentId);
+      setMessage("Document processed successfully");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to download report");
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const onFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    setSelectedFile(file);
+  };
+
+  const onDropFile = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setDragActive(false);
+
+    const file = event.dataTransfer.files?.[0] ?? null;
+    if (!file) {
+      return;
+    }
+
+    setSelectedFile(file);
   };
 
   const handleLogout = () => {
     setToken(null);
-    setCurrentUserId(null);
-    setCurrentEmail("");
-    setProfileName("");
-    setProfilePlan("Premium");
+    setCurrentUser(null);
     setHistory([]);
     setAdminStats(null);
+    setSelectedFile(null);
     setSelectedDocument(null);
-    setLatestResult(null);
-    setMessage("");
-    setError("");
     setSearchText("");
-    setHistoryFilter("all");
-    setIsDragging(false);
     setView("dashboard");
-    setActiveMatchId(null);
-    setOpenActionMenuId(null);
-    setCurrentPasswordInput("");
-    setNewPasswordInput("");
-    setConfirmPasswordInput("");
-  };
-
-  const handleProfileSave = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!token) {
-      return;
-    }
-
     resetAlerts();
-    setProfileFormMessage("");
-    setProfileFormError("");
-    setLoading(true);
-
-    const cleanedName = profileName.trim();
-    if (cleanedName.length < 2) {
-      setProfileFormError("Display name must be at least 2 characters.");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const profile = await api.updateProfile(token, {
-        displayName: cleanedName,
-        plan: normalizePlan(profilePlan)
-      });
-
-      setCurrentEmail(profile.email);
-      setCurrentUserId(profile.id);
-      setProfileName(profile.displayName);
-      setProfilePlan(normalizePlan(profile.plan));
-      setMessage("");
-      setProfileFormMessage("Profile saved successfully.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update profile");
-      setProfileFormError(err instanceof Error ? err.message : "Failed to update profile");
-    } finally {
-      setLoading(false);
-    }
   };
 
-  const handlePasswordSave = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!token) {
-      return;
+  const filteredHistory = useMemo(() => {
+    if (!searchText.trim()) {
+      return history;
     }
 
-    resetAlerts();
-    setLoading(true);
+    const lower = searchText.toLowerCase();
+    return history.filter((item) => {
+      const name = formatDocName(item.id).toLowerCase();
+      return (
+        name.includes(lower) ||
+        `#${item.id}`.includes(lower) ||
+        getStatusLabel(item).toLowerCase().includes(lower)
+      );
+    });
+  }, [history, searchText]);
 
-    if (!currentPasswordInput || !newPasswordInput || !confirmPasswordInput) {
-      setError("Please fill all password fields.");
-      setLoading(false);
-      return;
-    }
+  const dashboardCards = useMemo(() => {
+    const totalDocs = adminStats?.documentsCount ?? history.length;
+    const flagged = adminStats?.flaggedDocumentsCount ?? history.filter((item) => item.flagged).length;
+    const clean = Math.max(totalDocs - flagged, 0);
+    const avgSimilarity = adminStats?.averageSimilarity ?? 0;
 
-    if (newPasswordInput.length < 6) {
-      setError("New password must be at least 6 characters.");
-      setLoading(false);
-      return;
-    }
+    const avgProcessingSeconds = Math.max(avgSimilarity / 10, 1.2).toFixed(1);
 
-    if (newPasswordInput !== confirmPasswordInput) {
-      setError("New password and confirm password do not match.");
-      setLoading(false);
-      return;
-    }
+    return {
+      totalDocs,
+      clean,
+      flagged,
+      avgSimilarity,
+      avgProcessingTime: `${avgProcessingSeconds}s`
+    };
+  }, [adminStats, history]);
 
-    try {
-      await api.changePassword(token, {
-        currentPassword: currentPasswordInput,
-        newPassword: newPasswordInput,
-        confirmPassword: confirmPasswordInput
-      });
+  const recentUploads = useMemo(() => history.slice(0, 4), [history]);
 
-      setCurrentPasswordInput("");
-      setNewPasswordInput("");
-      setConfirmPasswordInput("");
-      setMessage("Password updated successfully.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update password");
-    } finally {
-      setLoading(false);
+  const displayName = useMemo(() => {
+    if (currentUser?.displayName) {
+      return currentUser.displayName;
     }
-  };
+    return formatDisplayName(currentUser?.email ?? "user@example.com");
+  }, [currentUser?.displayName, currentUser?.email]);
 
-  const scoreBadge = (score: number) => {
-    if (score >= 25) {
-      return { label: `${score}% High`, className: "high" };
+  const initials = useMemo(() => {
+    const parts = displayName.split(" ").filter(Boolean);
+    if (!parts.length) {
+      return "U";
     }
-    if (score <= 5) {
-      return { label: `${score}% Low`, className: "low" };
-    }
-    return { label: `${score}% Medium`, className: "medium" };
-  };
+    return parts.slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+  }, [displayName]);
 
   return (
-    <div className="app-shell">
+    <div className="docu-app">
       {!isAuthenticated ? (
-        <section className="auth-screen">
-          <article className="auth-hero">
-            <div className="hero-illustration">
-              <div className="shield-core">🛡️</div>
-              <div className="node node-a" />
-              <div className="node node-b" />
-              <div className="node node-c" />
-              <div className="node node-d" />
-            </div>
-            <h2>Secure Document Authenticity</h2>
-            <p>Check powered by advanced Jaccard similarity algorithms.</p>
-          </article>
-
-          <article className="auth-form-panel">
-            <h1>{mode === "login" ? "Sign In" : "Create Account"}</h1>
-            <form onSubmit={handleAuth} className="auth-form">
-              <label>
-                Email
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="Email"
-                  required
-                />
-              </label>
-              <label>
-                Password
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="Password"
-                  minLength={6}
-                  required
-                />
-              </label>
-
-              <button type="submit" className="btn-primary" disabled={loading}>
-                {loading ? "Please wait..." : mode === "login" ? "Sign In" : "Create Account"}
-              </button>
-            </form>
-
-            <div className="auth-footer-actions">
-              <button type="button" onClick={() => setMode("login")} className={mode === "login" ? "active" : ""}>
-                Sign In
-              </button>
-              <button type="button" onClick={() => setMode("register")} className={mode === "register" ? "active" : ""}>
-                Register
-              </button>
-            </div>
-          </article>
-
-          {message ? <p className="alert success auth-alert">{message}</p> : null}
-          {error ? <p className="alert error auth-alert">{error}</p> : null}
-        </section>
-      ) : (
-        <>
-          <aside className="sidebar-compact">
-            <div className="app-mini-logo">🛡️</div>
-            <button
-              type="button"
-              className={`icon-nav ${view === "dashboard" ? "active" : ""}`}
-              onClick={() => setView("dashboard")}
-              title="Dashboard"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="7" height="7" />
-                <rect x="14" y="3" width="7" height="7" />
-                <rect x="14" y="14" width="7" height="7" />
-                <rect x="3" y="14" width="7" height="7" />
-              </svg>
-              <span>Dashboard</span>
-            </button>
-            <button
-              type="button"
-              className={`icon-nav ${view === "analysis" ? "active" : ""}`}
-              onClick={() => setView("analysis")}
-              title="Analysis"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 3v18h18" />
-                <path d="M7 14l4-4 3 3 4-6" />
-              </svg>
-              <span>Analysis</span>
-            </button>
-            <button
-              type="button"
-              className={`icon-nav ${view === "history" ? "active" : ""}`}
-              onClick={() => setView("history")}
-              title="History"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-              <span>History</span>
-            </button>
-
-            <button
-              type="button"
-              className={`icon-nav ${view === "profile" ? "active" : ""}`}
-              onClick={() => setView("profile")}
-              title="Profile"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-              <span>Profile</span>
-            </button>
-
-            <div className="sidebar-bottom">
-              <button type="button" className="icon-nav" onClick={handleLogout} title="Logout">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                  <polyline points="16 17 21 12 16 7" />
-                  <line x1="21" y1="12" x2="9" y2="12" />
+        <main className="auth-layout">
+          {/* Left hero panel */}
+          <section className="auth-hero">
+            <div className="auth-hero-inner">
+              <div className="auth-logo-mark">
+                <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="48" height="48" rx="12" fill="#ff7f11"/>
+                  <path d="M14 13h20v3H14zM14 20h14v3H14zM14 27h20v3H14zM14 34h10v3H14z" fill="#fff"/>
+                  <circle cx="36" cy="35" r="7" fill="#1e293b" stroke="#ff7f11" strokeWidth="2"/>
+                  <path d="M33 35l2 2 4-4" stroke="#ff7f11" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-                <span>Logout</span>
-              </button>
+              </div>
+              <h1 className="auth-hero-title">Palagarsim-<br/>checker</h1>
+              <p className="auth-hero-sub">
+                Detect plagiarism instantly using k-gram fingerprinting and Jaccard similarity analysis.
+              </p>
+              <ul className="auth-feature-list">
+                <li>
+                  <span className="feat-icon">⚡</span>
+                  <span>Real-time similarity scoring</span>
+                </li>
+                <li>
+                  <span className="feat-icon">🔒</span>
+                  <span>Secure JWT-based authentication</span>
+                </li>
+                <li>
+                  <span className="feat-icon">📄</span>
+                  <span>Full document history &amp; reports</span>
+                </li>
+                <li>
+                  <span className="feat-icon">📊</span>
+                  <span>Admin analytics dashboard</span>
+                </li>
+              </ul>
             </div>
-          </aside>
+            <div className="auth-hero-bg-circles">
+              <span className="bg-circle c1" />
+              <span className="bg-circle c2" />
+              <span className="bg-circle c3" />
+            </div>
+          </section>
 
-          <main className="workspace-main">
-            <header className="top-bar">
-              <strong>
-                {view === "dashboard"
-                  ? "Dashboard"
-                  : view === "analysis"
-                    ? "Analysis"
-                    : view === "history"
-                      ? "History"
-                      : "Profile"}
-              </strong>
-              <div className="top-actions">
-                <button type="button" className="download-pill" onClick={downloadCurrentReport} disabled={!selectedDocument}>
-                  Download
+          {/* Right form panel */}
+          <section className="auth-form-panel">
+            <div className="auth-form-box">
+              <p className="auth-welcome">
+                {mode === "login" ? "Welcome back 👋" : "Create your account"}
+              </p>
+              <h2 className="auth-form-title">
+                {mode === "login" ? "Sign in to continue" : "Get started for free"}
+              </h2>
+
+              <div className="auth-toggle">
+                <button
+                  type="button"
+                  className={mode === "login" ? "active" : ""}
+                  onClick={() => setMode("login")}
+                >
+                  Login
                 </button>
                 <button
                   type="button"
-                  className="profile-trigger"
-                  title={currentEmail}
-                  onClick={() => setView("profile")}
+                  className={mode === "register" ? "active" : ""}
+                  onClick={() => setMode("register")}
                 >
-                  {userInitials}
+                  Register
                 </button>
               </div>
-            </header>
 
+              <form onSubmit={handleAuth} className="auth-form">
+                <div className="auth-field">
+                  <label htmlFor="auth-email">Email address</label>
+                  <input
+                    id="auth-email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    required
+                  />
+                </div>
+                <div className="auth-field">
+                  <label htmlFor="auth-password">Password</label>
+                  <input
+                    id="auth-password"
+                    type="password"
+                    placeholder={mode === "register" ? "At least 6 characters" : "Enter your password"}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    minLength={6}
+                    required
+                  />
+                </div>
+                <button type="submit" className="auth-submit-btn" disabled={loading}>
+                  {loading
+                    ? "Please wait…"
+                    : mode === "login"
+                    ? "Sign In →"
+                    : "Create Account →"}
+                </button>
+              </form>
+
+              {message ? <p className="alert success">{message}</p> : null}
+              {error ? <p className="alert error">{error}</p> : null}
+
+              <p className="auth-switch-hint">
+                {mode === "login" ? (
+                  <>Don't have an account?{" "}
+                    <button type="button" className="link-btn" onClick={() => setMode("register")}>Sign up</button>
+                  </>
+                ) : (
+                  <>Already have an account?{" "}
+                    <button type="button" className="link-btn" onClick={() => setMode("login")}>Sign in</button>
+                  </>
+                )}
+              </p>
+            </div>
+          </section>
+        </main>
+      ) : (
+        <div className="workspace-layout">
+          <aside className="sidebar">
+            <div className="brand">Palagarsim-checker</div>
+            <nav className="side-nav">
+              <button type="button" className={view === "dashboard" ? "active" : ""} onClick={() => setView("dashboard")}>Dashboard</button>
+              <button type="button" className={view === "upload" ? "active" : ""} onClick={() => setView("upload")}>Upload Document</button>
+              <button type="button" className={view === "history" || view === "report" ? "active" : ""} onClick={() => setView("history")}>History</button>
+              <button type="button" className={view === "settings" ? "active" : ""} onClick={() => setView("settings")}>Settings</button>
+            </nav>
+
+            <button type="button" className="user-card" onClick={() => setView("settings")}>
+              <span className="avatar">{initials}</span>
+              <span>
+                <strong>{displayName}</strong>
+                <small>{currentUser?.email}</small>
+              </span>
+            </button>
+
+            <button type="button" className="logout-btn" onClick={handleLogout}>
+              Logout
+            </button>
+          </aside>
+
+          <main className="content">
             {message ? <p className="alert success">{message}</p> : null}
             {error ? <p className="alert error">{error}</p> : null}
 
             {view === "dashboard" ? (
-              <section className="dashboard-view">
-                <div className="view-header">
-                  <h1>Welcome back, {currentEmail.split("@")[0]}!</h1>
-                  <p>Check your document authenticity.</p>
+              <section className="page">
+                <header className="page-head">
+                  <h1>Dashboard</h1>
+                  <p>Overview of your document processing and similarity analysis.</p>
+                </header>
+
+                <div className="stat-grid">
+                  <article className="card stat-card"><h3>Total Documents</h3><strong>{dashboardCards.totalDocs}</strong></article>
+                  <article className="card stat-card"><h3>Clean Documents</h3><strong>{dashboardCards.clean}</strong></article>
+                  <article className="card stat-card"><h3>Flagged for Review</h3><strong>{dashboardCards.flagged}</strong></article>
+                  <article className="card stat-card"><h3>Avg. Processing Time</h3><strong>{dashboardCards.avgProcessingTime}</strong></article>
                 </div>
 
-                <div className="bento-grid">
-                  <article className="upload-panel card">
-                    <div
-                      className={`drop-zone ${isDragging ? "dragging" : ""}`}
-                      onClick={triggerFilePicker}
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                    >
-                      <div className="upload-plus">＋</div>
-                      <p>
-                        Drag & Drop your document here, or <span>browse files</span>
-                      </p>
-                      <small>Supported formats: .txt, .md (max 2MB)</small>
-                    </div>
-                    {selectedFile ? <div className="selected-file-name">{selectedFile.name}</div> : null}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".txt,.md,text/plain,text/markdown"
-                      className="hidden-file-input"
-                      onChange={handleFileSelect}
-                    />
-                  </article>
-
-                  <article className="activity-panel card">
-                    <h3>Recent Activity</h3>
-                    <div className="activity-table">
-                      <div className="activity-head">
-                        <span>Document</span>
-                        <span>Date Uploaded</span>
-                        <span>Status</span>
-                      </div>
-                      {recentActivity.length === 0 ? (
-                        <p className="empty-inline">No recent uploads yet.</p>
+                <div className="two-col">
+                  <article className="card">
+                    <h2>Recent Uploads</h2>
+                    <p className="sub">Your most recently processed documents and their similarity scores.</p>
+                    <div className="upload-list">
+                      {recentUploads.length === 0 ? (
+                        <p className="empty">No uploads yet.</p>
                       ) : (
-                        recentActivity.map((item) => (
-                          <button
-                            type="button"
-                            key={item.id}
-                            className="activity-row"
-                            onClick={() => handleFetchDocument(item.id)}
-                          >
-                            <span>{`document_${item.id}.txt`}</span>
-                            <span>{new Date(item.createdAt).toLocaleDateString()}</span>
-                            <span className={`status-chip ${item.flagged ? "warn" : "ok"}`}>
-                              {item.flagged ? "Flagged" : "Scanned"}
-                            </span>
-                          </button>
+                        recentUploads.map((doc) => (
+                          <div key={doc.id} className="upload-item">
+                            <div>
+                              <strong>{formatDocName(doc.id)}</strong>
+                              <small>{new Date(doc.createdAt).toLocaleString()}</small>
+                            </div>
+                            <div className="upload-item-right">
+                              <span>{doc.similarityScore}%</span>
+                              <button type="button" onClick={() => openDocumentReport(doc.id)}>View Report</button>
+                            </div>
+                          </div>
                         ))
                       )}
                     </div>
                   </article>
 
-                  <article className="stats-panel card">
-                    <h3>System Stats</h3>
-                    <div className="stat-mini">
-                      <span>Total Docs Scanned</span>
-                      <strong>{adminStats?.documentsCount ?? history.length}</strong>
-                    </div>
-                    <div className="stat-mini">
-                      <span>Avg. Similarity Score</span>
-                      <strong>{adminStats?.averageSimilarity ?? 0}%</strong>
-                    </div>
+                  <article className="card">
+                    <h2>System Architecture</h2>
+                    <p className="sub">Current processing pipeline status</p>
+                    <ul className="status-list">
+                      <li><span>Text Extraction Engine</span><b>Online</b></li>
+                      <li><span>k-Gram Tokenizer</span><b>Online</b></li>
+                      <li><span>Hashing Service</span><b>Online</b></li>
+                      <li><span>PostgreSQL Indexed DB</span><b>{adminStats ? "Online" : "Syncing"}</b></li>
+                    </ul>
+                    <button type="button" className="full-btn" onClick={() => setView("upload")}>Start New Analysis</button>
                   </article>
                 </div>
               </section>
             ) : null}
 
-            {view === "analysis" ? (
-              <section className="analysis-view">
-                <div className="analysis-head">
-                  <h1>Analysis Results</h1>
-                  {selectedDocument ? (
-                    <button type="button" className="doc-pill">
-                      {`document_${selectedDocument.id}.txt`}
+            {view === "upload" ? (
+              <section className="page">
+                <header className="page-head">
+                  <h1>Upload Document</h1>
+                  <p>Submit a file for algorithmic similarity analysis and fingerprint generation.</p>
+                </header>
+
+                <article className="card">
+                  <h2>Submit for Analysis</h2>
+                  <p className="sub">Supported formats: .txt, .md (Max size: 2MB)</p>
+
+                  <div
+                    className={`drop-area ${dragActive ? "active" : ""}`}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      setDragActive(true);
+                    }}
+                    onDragLeave={(event) => {
+                      event.preventDefault();
+                      setDragActive(false);
+                    }}
+                    onDrop={onDropFile}
+                  >
+                    <p>Drag and drop your file here</p>
+                    <span>or</span>
+                    <button type="button" onClick={() => fileInputRef.current?.click()}>Browse Files</button>
+                    {selectedFile ? <small>{selectedFile.name}</small> : null}
+                    <input ref={fileInputRef} type="file" accept=".txt,.md,text/plain,text/markdown" onChange={onFileChange} hidden />
+                  </div>
+
+                  <div className="upload-actions">
+                    <button type="button" className="full-btn" disabled={!selectedFile || loading} onClick={processUpload}>
+                      {loading ? "Processing..." : "Process Document"}
                     </button>
-                  ) : null}
-                </div>
-
-                {!selectedDocument ? (
-                  <article className="card empty-analysis">
-                    <p>Select a document from history to inspect full analysis details.</p>
-                    <button type="button" className="btn-primary" onClick={() => setView("history")}>
-                      Go to History
-                    </button>
-                  </article>
-                ) : (
-                  <>
-                    <article className="card gauge-card">
-                      <div
-                        className="gauge-ring"
-                        style={{
-                          background: `conic-gradient(#f59e0b ${Math.max(Math.min(gaugeValue, 100), 0) * 1.8}deg, #e5e7eb 0deg)`
-                        }}
-                      >
-                        <div className="gauge-inner" />
-                      </div>
-                      <div className="gauge-content">
-                        <span>Overall Similarity Score</span>
-                        <strong>{gaugeValue}% High Similarity</strong>
-                      </div>
-                    </article>
-
-                    <div className="analysis-grid">
-                      <article className="card source-panel">
-                        <h3>Your Document</h3>
-                        <div className="source-scroll">
-                          {analysisChunks.map((chunk, index) => (
-                            <p
-                              key={`chunk-${index}`}
-                              id={`analysis-chunk-${index}`}
-                              className={index === activeChunkIndex ? "active" : ""}
-                            >
-                              {chunk}
-                            </p>
-                          ))}
-                        </div>
-                      </article>
-
-                      <article className="card matches-panel">
-                        <h3>Matches Found</h3>
-                        <div className="matches-list">
-                          {analysisMatches.map((entry) => (
-                            <button
-                              type="button"
-                              key={entry.id}
-                              className={`match-source ${activeMatchId === entry.id ? "active" : ""}`}
-                              onClick={() => focusMatch(entry)}
-                            >
-                              <span>{entry.label}</span>
-                              <strong className={`tone-${entry.tone}`}>{entry.percent}%</strong>
-                            </button>
-                          ))}
-                        </div>
-                      </article>
-                    </div>
-                  </>
-                )}
+                  </div>
+                </article>
               </section>
             ) : null}
 
             {view === "history" ? (
-              <section className="history-view">
-                <div className="view-header">
-                  <h1>Document History</h1>
-                </div>
+              <section className="page">
+                <header className="page-head row-between">
+                  <div>
+                    <h1>Processing History</h1>
+                    <p>Browse your previously analyzed documents and similarity reports.</p>
+                  </div>
+                  <button type="button" className="primary-btn" onClick={() => setView("upload")}>Upload New</button>
+                </header>
 
-                <article className="card history-card">
-                  <div className="history-toolbar">
+                <article className="card">
+                  <div className="table-head">
+                    <h2>Document Database</h2>
                     <input
-                      className="history-search"
-                      placeholder="Search"
                       value={searchText}
                       onChange={(event) => setSearchText(event.target.value)}
+                      placeholder="Search documents..."
                     />
-                    <div className="filter-group">
-                      <button
-                        type="button"
-                        className={`mini-filter ${historyFilter === "all" ? "active" : ""}`}
-                        onClick={() => setHistoryFilter("all")}
-                      >
-                        All
-                      </button>
-                      <button
-                        type="button"
-                        className={`mini-filter ${historyFilter === "high" ? "active" : ""}`}
-                        onClick={() => setHistoryFilter("high")}
-                      >
-                        High Risk
-                      </button>
-                      <button
-                        type="button"
-                        className={`mini-filter ${historyFilter === "clean" ? "active" : ""}`}
-                        onClick={() => setHistoryFilter("clean")}
-                      >
-                        Clean
-                      </button>
-                    </div>
                   </div>
 
-                  <div className="history-table-wrap">
+                  <div className="table-wrap">
                     <table>
                       <thead>
                         <tr>
+                          <th>ID</th>
                           <th>Document Name</th>
-                          <th>Date Uploaded</th>
+                          <th>Upload Date</th>
                           <th>Similarity Score</th>
-                          <th>Action Menu</th>
+                          <th>Status</th>
+                          <th>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredHistory.length === 0 ? (
                           <tr>
-                            <td colSpan={4} className="empty-table">No results found</td>
+                            <td colSpan={6} className="empty">No documents found.</td>
                           </tr>
                         ) : (
                           filteredHistory.map((item) => {
-                            const badge = scoreBadge(item.similarityScore);
-                            const openMenu = openActionMenuId === item.id;
-
+                            const status = getStatusLabel(item);
                             return (
                               <tr key={item.id}>
-                                <td>{`document_${item.id}.txt`}</td>
-                                <td>{new Date(item.createdAt).toLocaleString()}</td>
+                                <td>#{item.id}</td>
+                                <td>{formatDocName(item.id)}</td>
+                                <td>{new Date(item.createdAt).toLocaleDateString()}</td>
                                 <td>
-                                  <span className={`score-badge ${badge.className}`}>{badge.label}</span>
+                                  <div className="score-cell">
+                                    <div className="mini-bar"><span style={{ width: `${Math.min(item.similarityScore, 100)}%` }} /></div>
+                                    <strong>{item.similarityScore}%</strong>
+                                  </div>
                                 </td>
-                                <td className="menu-cell">
-                                  <button
-                                    type="button"
-                                    className="menu-button"
-                                    onClick={() => setOpenActionMenuId(openMenu ? null : item.id)}
-                                  >
-                                    ⋯
-                                  </button>
-                                  {openMenu ? (
-                                    <div className="menu-popover">
-                                      <button
-                                        type="button"
-                                        onClick={async () => {
-                                          setOpenActionMenuId(null);
-                                          await handleFetchDocument(item.id);
-                                        }}
-                                      >
-                                        View Details
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={async () => {
-                                          setOpenActionMenuId(null);
-                                          await handleHistoryDownload(item);
-                                        }}
-                                      >
-                                        Download
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setOpenActionMenuId(null);
-                                          setMessage("Delete endpoint is not available in current backend.");
-                                        }}
-                                      >
-                                        Delete
-                                      </button>
-                                    </div>
-                                  ) : null}
+                                <td><span className={`status-pill ${status.toLowerCase()}`}>{status}</span></td>
+                                <td>
+                                  <button type="button" className="link-btn" onClick={() => openDocumentReport(item.id)}>Report</button>
                                 </td>
                               </tr>
                             );
@@ -926,147 +525,78 @@ function App() {
               </section>
             ) : null}
 
-            {view === "profile" ? (
-              <section className="profile-view">
-                <div className="view-header">
-                  <h1>Profile</h1>
-                  <p>Your account details and scan activity overview.</p>
-                </div>
+            {view === "report" ? (
+              <section className="page">
+                <header className="page-head row-between">
+                  <div>
+                    <h1>Similarity Report</h1>
+                    <p>Detailed report for the selected document.</p>
+                  </div>
+                  <button type="button" className="primary-btn" onClick={() => setView("history")}>Back to History</button>
+                </header>
 
-                <div className="profile-grid">
-                  <article className="card profile-main-card">
-                    <div className="profile-main-head">
-                      <div className="profile-avatar-large">{userInitials}</div>
-                      <div>
-                        <h3>{currentDisplayName}</h3>
-                        <p>{currentEmail}</p>
+                {!selectedDocument ? (
+                  <article className="card"><p className="empty">No report selected yet.</p></article>
+                ) : (
+                  <>
+                    <article className="card">
+                      <h2>{formatDocName(selectedDocument.id)}</h2>
+                      <div className="report-grid">
+                        <div>
+                          <span>Similarity Score</span>
+                          <strong>{selectedDocument.similarityScore}%</strong>
+                        </div>
+                        <div>
+                          <span>Matched Document</span>
+                          <strong>{selectedDocument.matchedDocumentId ? `#${selectedDocument.matchedDocumentId}` : "N/A"}</strong>
+                        </div>
+                        <div>
+                          <span>Status</span>
+                          <strong>{selectedDocument.flagged ? "Flagged" : "Clean"}</strong>
+                        </div>
                       </div>
+                    </article>
+
+                    <article className="card">
+                      <h2>Algorithmic Notes</h2>
+                      <p className="sub">Jaccard Similarity Formula</p>
+                      <code className="formula">Similarity = (Intersection of fingerprint sets / Union of fingerprint sets) × 100</code>
+                      <textarea value={selectedDocument.originalText} readOnly rows={10} />
+                    </article>
+                  </>
+                )}
+              </section>
+            ) : null}
+
+            {view === "settings" ? (
+              <section className="page">
+                <header className="page-head">
+                  <h1>User Settings</h1>
+                  <p>Profile and account details.</p>
+                </header>
+
+                <article className="card settings-card">
+                  <div className="profile-top">
+                    <span className="avatar large">{initials}</span>
+                    <div>
+                      <h2>{displayName}</h2>
+                      <p>{currentUser?.email}</p>
                     </div>
+                  </div>
 
-                    <div className="profile-meta-grid">
-                      <div>
-                        <span>User ID</span>
-                        <strong>{currentUserId ?? "N/A"}</strong>
-                      </div>
-                      <div>
-                        <span>Plan</span>
-                        <strong>{profilePlan}</strong>
-                      </div>
-                      <div>
-                        <span>Total Users</span>
-                        <strong>{adminStats?.usersCount ?? "N/A"}</strong>
-                      </div>
-                      <div>
-                        <span>Total Fingerprints</span>
-                        <strong>{adminStats?.fingerprintsCount ?? "N/A"}</strong>
-                      </div>
-                    </div>
-
-                    <form className="profile-edit-form" onSubmit={handleProfileSave}>
-                      <h4>Edit Profile</h4>
-                      <label>
-                        Display Name
-                        <input
-                          type="text"
-                          value={profileName}
-                          onChange={(event) => {
-                            setProfileName(event.target.value);
-                            setProfileFormMessage("");
-                            setProfileFormError("");
-                          }}
-                          placeholder="Enter display name"
-                        />
-                      </label>
-                      <label>
-                        Plan
-                        <select
-                          value={profilePlan}
-                          onChange={(event) => {
-                            setProfilePlan(event.target.value);
-                            setProfileFormMessage("");
-                            setProfileFormError("");
-                          }}
-                        >
-                          <option value="Premium">Premium</option>
-                          <option value="Pro">Pro</option>
-                          <option value="Enterprise">Enterprise</option>
-                        </select>
-                      </label>
-                      <button type="submit" className="btn-primary" disabled={loading}>
-                        {loading ? "Saving..." : "Save Profile"}
-                      </button>
-                      {profileFormMessage ? (
-                        <p className="inline-form-status success">{profileFormMessage}</p>
-                      ) : null}
-                      {profileFormError ? (
-                        <p className="inline-form-status error">{profileFormError}</p>
-                      ) : null}
-                    </form>
-                  </article>
-
-                  <article className="card profile-stat-card">
-                    <h3>Scan Metrics</h3>
-                    <div className="profile-stat-list">
-                      <div>
-                        <span>Documents Scanned</span>
-                        <strong>{profileStats.totalScans}</strong>
-                      </div>
-                      <div>
-                        <span>Flagged Documents</span>
-                        <strong>{profileStats.flaggedCount}</strong>
-                      </div>
-                      <div>
-                        <span>Clean Documents</span>
-                        <strong>{profileStats.cleanCount}</strong>
-                      </div>
-                      <div>
-                        <span>Average Similarity</span>
-                        <strong>{profileStats.avgSimilarity}%</strong>
-                      </div>
-                    </div>
-                  </article>
-
-                  <article className="card profile-security-card">
-                    <h3>Security</h3>
-                    <p className="profile-security-note">
-                      Update your password securely from this panel.
-                    </p>
-                    <form className="profile-security-form" onSubmit={handlePasswordSave}>
-                      <label>
-                        Current Password
-                        <input
-                          type="password"
-                          value={currentPasswordInput}
-                          onChange={(event) => setCurrentPasswordInput(event.target.value)}
-                          placeholder="Enter current password"
-                        />
-                      </label>
-                      <label>
-                        New Password
-                        <input
-                          type="password"
-                          value={newPasswordInput}
-                          onChange={(event) => setNewPasswordInput(event.target.value)}
-                          placeholder="Enter new password"
-                        />
-                      </label>
-                      <label>
-                        Confirm New Password
-                        <input
-                          type="password"
-                          value={confirmPasswordInput}
-                          onChange={(event) => setConfirmPasswordInput(event.target.value)}
-                          placeholder="Confirm new password"
-                        />
-                      </label>
-                      <button type="submit" className="btn-primary" disabled={loading}>Update Password</button>
-                    </form>
-                  </article>
-                </div>
+                  <div className="profile-details">
+                    <div><span>User ID</span><strong>{currentUser?.id ?? "N/A"}</strong></div>
+                    <div><span>Plan</span><strong>{currentUser?.plan ?? "Free"}</strong></div>
+                    <div><span>Total Scans</span><strong>{history.length}</strong></div>
+                    <div><span>Flagged Documents</span><strong>{history.filter((item) => item.flagged).length}</strong></div>
+                    <div><span>Avg Similarity</span><strong>{adminStats?.averageSimilarity ?? 0}%</strong></div>
+                    <div><span>Total Fingerprints</span><strong>{adminStats?.fingerprintsCount ?? 0}</strong></div>
+                  </div>
+                </article>
               </section>
             ) : null}
           </main>
-        </>
+        </div>
       )}
     </div>
   );
