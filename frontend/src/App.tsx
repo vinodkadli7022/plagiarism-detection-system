@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, DragEvent, FormEvent } from "react";
 import { api } from "./api";
 import type { AdminStats, DocumentDetails, HistoryItem, UserProfile } from "./types";
@@ -45,9 +45,21 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const isAuthenticated = Boolean(token);
 
+  // Auto-dismiss alerts after 4 seconds
+  useEffect(() => {
+    if (!message && !error) return;
+    const t = setTimeout(() => resetAlerts(), 4000);
+    return () => clearTimeout(t);
+  }, [message, error]);
+
   const resetAlerts = () => {
     setMessage("");
     setError("");
+  };
+
+  const navigate = (nextView: View) => {
+    resetAlerts();
+    setView(nextView);
   };
 
   const refreshData = async (authToken: string) => {
@@ -367,25 +379,25 @@ function App() {
             </div>
 
             <nav className="side-nav">
-              <button type="button" className={view === "dashboard" ? "active" : ""} onClick={() => setView("dashboard")}>
+              <button type="button" className={view === "dashboard" ? "active" : ""} onClick={() => navigate("dashboard")}>
                 <svg viewBox="0 0 20 20" fill="currentColor">
                   <rect x="2" y="2" width="7" height="7" rx="1"/><rect x="11" y="2" width="7" height="7" rx="1"/><rect x="2" y="11" width="7" height="7" rx="1"/><rect x="11" y="11" width="7" height="7" rx="1"/>
                 </svg>
                 Dashboard
               </button>
-              <button type="button" className={view === "upload" ? "active" : ""} onClick={() => setView("upload")}>
+              <button type="button" className={view === "upload" ? "active" : ""} onClick={() => navigate("upload")}>
                 <svg viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd"/>
                 </svg>
                 Upload Document
               </button>
-              <button type="button" className={view === "history" || view === "report" ? "active" : ""} onClick={() => setView("history")}>
+              <button type="button" className={view === "history" || view === "report" ? "active" : ""} onClick={() => navigate("history")}>
                 <svg viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h7a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd"/>
                 </svg>
                 History
               </button>
-              <button type="button" className={view === "settings" ? "active" : ""} onClick={() => setView("settings")}>
+              <button type="button" className={view === "settings" ? "active" : ""} onClick={() => navigate("settings")}>
                 <svg viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd"/>
                 </svg>
@@ -394,7 +406,7 @@ function App() {
             </nav>
 
             <div className="sidebar-bottom">
-              <button type="button" className="user-card" onClick={() => setView("settings")}>
+              <button type="button" className="user-card" onClick={() => navigate("settings")}>
                 <span className="avatar">{initials}</span>
                 <span>
                   <strong>{displayName}</strong>
@@ -519,7 +531,7 @@ function App() {
                         <b>{adminStats ? "14ms latency" : "Syncing"}</b>
                       </li>
                     </ul>
-                    <button type="button" className="full-btn" onClick={() => setView("upload")}>
+                    <button type="button" className="full-btn" onClick={() => navigate("upload")}>
                       <svg className="btn-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M2 10h3l2-5 2 10 2-6 2 3 1-2h4"/>
                       </svg>
@@ -576,7 +588,7 @@ function App() {
                     <h1>Processing History</h1>
                     <p>Browse your previously analyzed documents and similarity reports.</p>
                   </div>
-                  <button type="button" className="primary-btn" onClick={() => setView("upload")}>Upload New</button>
+                  <button type="button" className="primary-btn" onClick={() => navigate("upload")}>Upload New</button>
                 </header>
 
                 <article className="card">
@@ -642,7 +654,7 @@ function App() {
                     <h1>Similarity Report</h1>
                     <p>Detailed report for the selected document.</p>
                   </div>
-                  <button type="button" className="primary-btn" onClick={() => setView("history")}>Back to History</button>
+                  <button type="button" className="primary-btn" onClick={() => navigate("history")}>Back to History</button>
                 </header>
 
                 {!selectedDocument ? (
