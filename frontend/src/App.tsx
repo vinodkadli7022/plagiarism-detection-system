@@ -42,6 +42,7 @@ function App() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [_historyFilter, _setHistoryFilter] = useState<"all" | "high" | "clean">("all");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const isAuthenticated = Boolean(token);
@@ -61,6 +62,7 @@ function App() {
   const navigate = (nextView: View) => {
     resetAlerts();
     setView(nextView);
+    setSidebarOpen(false);
   };
 
   const refreshData = async (authToken: string) => {
@@ -375,7 +377,8 @@ function App() {
         </main>
       ) : (
         <div className="workspace-layout">
-          <aside className="sidebar">
+          {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
+          <aside className={`sidebar${sidebarOpen ? " open" : ""}`}>
             <div className="brand">
               <div className="brand-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -436,6 +439,18 @@ function App() {
           </aside>
 
           <main className="content">
+            {/* Mobile top bar */}
+            <div className="mobile-topbar">
+              <button type="button" className="hamburger" onClick={() => setSidebarOpen(true)}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="3" y1="6" x2="21" y2="6"/>
+                  <line x1="3" y1="12" x2="21" y2="12"/>
+                  <line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+              </button>
+              <span className="mobile-brand">ScanGuard</span>
+              <span className="avatar" style={{ width: 34, height: 34, fontSize: ".78rem" }}>{initials}</span>
+            </div>
             {message ? <p className="alert success">{message}</p> : null}
             {error ? <p className="alert error">{error}</p> : null}
 

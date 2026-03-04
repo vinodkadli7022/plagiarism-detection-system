@@ -556,18 +556,106 @@ textarea:focus { border-color: #EA580C; }
 /* ── Empty ───────────────────────────────────────────────────────── */
 .empty { color: #52525B; text-align: center; padding: 24px; }
 
-/* ── Responsive ──────────────────────────────────────────────────── */
-@media (max-width: 1024px) { .dashboard-grid { grid-template-columns: 1fr; } }
-@media (max-width: 1120px) { .two-col { grid-template-columns: 1fr; } .stat-grid { grid-template-columns: repeat(2,1fr); } }
-@media (max-width: 900px) {
-  .workspace-layout { flex-direction: column; }
-  .sidebar { width: 100%; height: auto; position: static; }
-  .result-card { grid-template-columns: 1fr; gap: 14px; }
-  .score-box { flex-direction: row; justify-content: space-between; align-items: center; width: 100%; }
+/* ── Mobile sidebar drawer ───────────────────────────────────────── */
+.sidebar-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 99;
+  background: rgba(0,0,0,.55);
 }
-@media (max-width: 680px) {
-  .content { padding: 20px; }
-  .table-head { flex-direction: column; align-items: stretch; }
-  .row-between { flex-direction: column; align-items: flex-start; }
-  .stat-grid { grid-template-columns: 1fr; }
+.mobile-topbar {
+  display: none;
+  align-items: center; gap: 12px;
+  padding: 14px 16px;
+  background: #000; color: #fff;
+  border-radius: 16px; margin-bottom: 20px;
+}
+.mobile-brand { flex: 1; font-weight: 700; font-size: 1rem; letter-spacing: -.01em; }
+.hamburger {
+  background: none; border: none; color: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  padding: 2px; flex-shrink: 0;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────── */
+
+/* Large desktop: keep side-by-side */
+@media (min-width: 1121px) {
+  .two-col { grid-template-columns: 2fr 1.4fr; }
+  .stat-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
+}
+
+/* Tablet landscape ≤ 1120px */
+@media (max-width: 1120px) {
+  .two-col { grid-template-columns: 1fr; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .rpt-layout { grid-template-columns: 1fr; }
+}
+
+/* Tablet portrait ≤ 900px — sidebar becomes a drawer */
+@media (max-width: 900px) {
+  .sidebar-overlay { display: block; }
+
+  .sidebar {
+    position: fixed; left: -280px; top: 0; bottom: 0;
+    width: 260px; height: 100vh;
+    z-index: 100; transition: left .28s cubic-bezier(.4,0,.2,1);
+    overflow-y: auto;
+  }
+  .sidebar.open { left: 0; }
+
+  .mobile-topbar { display: flex; }
+
+  .result-card { grid-template-columns: 1fr; gap: 16px; }
+  .score-box { flex-direction: row; justify-content: space-between; align-items: center; width: 100%; }
+
+  .hist-card-head { flex-direction: column; }
+  .hist-search-wrap { min-width: unset; width: 100%; }
+}
+
+/* Small tablet / large phone ≤ 768px */
+@media (max-width: 768px) {
+  .content { padding: 16px; }
+  .page-head h1 { font-size: 1.6rem; }
+  .header-left h1 { font-size: 1.5rem; }
+
+  .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+
+  .two-col { grid-template-columns: 1fr; gap: 16px; }
+
+  .upload-item-right { gap: 8px; }
+
+  .rpt-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .rpt-doc-top { flex-direction: column; align-items: flex-start; }
+  .rpt-export-btn { width: 100%; justify-content: center; }
+  .rpt-match-item { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .rpt-match-score { align-items: flex-start; }
+
+  .hist-footer { flex-direction: column; gap: 12px; align-items: flex-start; }
+}
+
+/* Phone ≤ 500px */
+@media (max-width: 500px) {
+  .content { padding: 12px; }
+  .mobile-topbar { border-radius: 12px; padding: 12px; }
+
+  .page-head h1 { font-size: 1.35rem; }
+
+  .stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-card strong { font-size: 1.6rem; }
+
+  .card { padding: 16px; }
+  .gauge-card { padding: 18px 14px 14px; }
+  .gauge-circle-wrap { width: 130px; height: 130px; }
+  .gauge-pct { font-size: 1.8rem; }
+
+  .rpt-doc-card { padding: 16px; }
+  .rpt-tech-card, .rpt-algo-card { padding: 16px; }
+
+  .hist-table th, .hist-table td { padding: 10px 12px; }
+
+  .row-between { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .user-profile-pill { padding: 6px 6px 6px 14px; }
+  .pill-user-info { display: none; }
+
+  .auth-form-panel { padding: 32px 20px; }
 }
