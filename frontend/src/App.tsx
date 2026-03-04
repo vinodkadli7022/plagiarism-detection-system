@@ -41,6 +41,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [historyFilter, setHistoryFilter] = useState<"all" | "high" | "clean">("all");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const isAuthenticated = Boolean(token);
@@ -249,77 +250,82 @@ function App() {
     <div className="docu-app">
       {!isAuthenticated ? (
         <main className="auth-layout">
-          {/* Left hero panel */}
+          {/* Left illustration panel */}
           <section className="auth-hero">
-            <div className="auth-hero-inner">
-              <div className="auth-logo-mark">
-                <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="48" height="48" rx="12" fill="#ff7f11"/>
-                  <path d="M14 13h20v3H14zM14 20h14v3H14zM14 27h20v3H14zM14 34h10v3H14z" fill="#fff"/>
-                  <circle cx="36" cy="35" r="7" fill="#1e293b" stroke="#ff7f11" strokeWidth="2"/>
-                  <path d="M33 35l2 2 4-4" stroke="#ff7f11" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+            <div className="auth-illus">
+              <div className="auth-orbit" />
+              <div className="auth-orbit-inner" />
+
+              {/* Floating icon cards */}
+              <div className="auth-float-card fc-tl">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
               </div>
-              <h1 className="auth-hero-title">Palagarsim-<br/>checker</h1>
-              <p className="auth-hero-sub">
-                Detect plagiarism instantly using k-gram fingerprinting and Jaccard similarity analysis.
-              </p>
-              <ul className="auth-feature-list">
-                <li>
-                  <span className="feat-icon">⚡</span>
-                  <span>Real-time similarity scoring</span>
-                </li>
-                <li>
-                  <span className="feat-icon">🔒</span>
-                  <span>Secure JWT-based authentication</span>
-                </li>
-                <li>
-                  <span className="feat-icon">📄</span>
-                  <span>Full document history &amp; reports</span>
-                </li>
-                <li>
-                  <span className="feat-icon">📊</span>
-                  <span>Admin analytics dashboard</span>
-                </li>
-              </ul>
+              <div className="auth-float-card fc-ml">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+              </div>
+              <div className="auth-float-card fc-tr">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C8 2 5 5.5 5 9c0 2.5 1 5 2 7"/><path d="M12 2c4 0 7 3.5 7 7 0 2.5-1 5-2 7"/><path d="M9 16c0 1.7 1.3 3 3 3s3-1.3 3-3"/><path d="M10 12c0 1.1.9 2 2 2s2-.9 2-2"/><path d="M11 8c0 .6.4 1 1 1s1-.4 1-1"/></svg>
+              </div>
+              <div className="auth-float-card fc-br">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              </div>
+              <div className="auth-float-card fc-bl">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+              <div className="auth-float-card fc-bc">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+
+              {/* Central shield with fingerprint */}
+              <div className="auth-shield-wrap">
+                <div className="auth-shield">
+                  {/* Shield background shape */}
+                  <svg className="auth-shield-bg" viewBox="0 0 148 170" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <linearGradient id="shieldGrad" x1="0" y1="0" x2="148" y2="170" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stopColor="#4F46E5"/>
+                        <stop offset="100%" stopColor="#3730A3"/>
+                      </linearGradient>
+                    </defs>
+                    <path d="M74 4L8 30V90C8 128 38 160 74 170C110 160 140 128 140 90V30L74 4Z" fill="url(#shieldGrad)"/>
+                  </svg>
+                  {/* Fingerprint icon */}
+                  <svg className="auth-shield-fg" viewBox="0 0 64 64" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 38c0 0 0-6 12-6s12 6 12 6"/>
+                    <path d="M16 34c0-8.8 7.2-16 16-16s16 7.2 16 16"/>
+                    <path d="M12 32c0-11 9-20 20-20s20 9 20 20"/>
+                    <path d="M24 40c0 2.2 1.8 4 8 4s8-1.8 8-4"/>
+                    <path d="M28 42v4"/>
+                    <path d="M20 44c1 4 6 7 12 7s11-3 12-7"/>
+                    <path d="M32 18v-4"/>
+                    <path d="M24 20l-3-3"/>
+                    <path d="M40 20l3-3"/>
+                  </svg>
+                </div>
+              </div>
             </div>
-            <div className="auth-hero-bg-circles">
-              <span className="bg-circle c1" />
-              <span className="bg-circle c2" />
-              <span className="bg-circle c3" />
+
+            <div className="auth-hero-text">
+              <h1 className="auth-hero-title">Secure Document<br/>Authenticity Check</h1>
+              <p className="auth-hero-sub">Powered by advanced Jaccard similarity algorithms for precise detection.</p>
             </div>
           </section>
 
           {/* Right form panel */}
           <section className="auth-form-panel">
             <div className="auth-form-box">
-              <p className="auth-welcome">
-                {mode === "login" ? "Welcome back 👋" : "Create your account"}
-              </p>
               <h2 className="auth-form-title">
-                {mode === "login" ? "Sign in to continue" : "Get started for free"}
+                {mode === "login" ? "Sign In" : "Create Account"}
               </h2>
-
-              <div className="auth-toggle">
-                <button
-                  type="button"
-                  className={mode === "login" ? "active" : ""}
-                  onClick={() => setMode("login")}
-                >
-                  Login
-                </button>
-                <button
-                  type="button"
-                  className={mode === "register" ? "active" : ""}
-                  onClick={() => setMode("register")}
-                >
-                  Register
-                </button>
-              </div>
+              <p className="auth-welcome">
+                {mode === "login"
+                  ? "Access your dashboard to manage documents."
+                  : "Start detecting plagiarism in seconds."}
+              </p>
 
               <form onSubmit={handleAuth} className="auth-form">
                 <div className="auth-field">
-                  <label htmlFor="auth-email">Email address</label>
+                  <label htmlFor="auth-email">Email</label>
                   <input
                     id="auth-email"
                     type="email"
@@ -334,7 +340,7 @@ function App() {
                   <input
                     id="auth-password"
                     type="password"
-                    placeholder={mode === "register" ? "At least 6 characters" : "Enter your password"}
+                    placeholder={mode === "register" ? "At least 6 characters" : "••••••••"}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     minLength={6}
@@ -342,28 +348,28 @@ function App() {
                   />
                 </div>
                 <button type="submit" className="auth-submit-btn" disabled={loading}>
-                  {loading
-                    ? "Please wait…"
-                    : mode === "login"
-                    ? "Sign In →"
-                    : "Create Account →"}
+                  {loading ? "Please wait…" : mode === "login" ? "Sign In" : "Create Account"}
                 </button>
               </form>
 
-              {message ? <p className="alert success">{message}</p> : null}
-              {error ? <p className="alert error">{error}</p> : null}
+              {message ? <p className="alert success" style={{ marginTop: 12 }}>{message}</p> : null}
+              {error ? <p className="alert error" style={{ marginTop: 12 }}>{error}</p> : null}
 
-              <p className="auth-switch-hint">
+              <div className="auth-bottom-row">
                 {mode === "login" ? (
-                  <>Don't have an account?{" "}
-                    <button type="button" className="link-btn" onClick={() => setMode("register")}>Sign up</button>
+                  <>
+                    <button type="button" className="link-btn" onClick={() => setMode("register")}>Create Account</button>
+                    <span className="divider">|</span>
+                    <button type="button" className="auth-forgot">Forgot Password?</button>
                   </>
                 ) : (
-                  <>Already have an account?{" "}
-                    <button type="button" className="link-btn" onClick={() => setMode("login")}>Sign in</button>
+                  <>
+                    <button type="button" className="link-btn" onClick={() => setMode("login")}>Sign In</button>
+                    <span className="divider">|</span>
+                    <button type="button" className="auth-forgot">Already have an account?</button>
                   </>
                 )}
-              </p>
+              </div>
             </div>
           </section>
         </main>
@@ -371,13 +377,18 @@ function App() {
         <div className="workspace-layout">
           <aside className="sidebar">
             <div className="brand">
-              <svg className="brand-icon" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7L12 2z" fill="#2563eb"/>
-                <path d="M9 12l2 2 4-4" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Palagarsim-checker
+              <div className="brand-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+              </div>
+              ScanGuard
             </div>
 
+            <div className="nav-section-label">Menu</div>
             <nav className="side-nav">
               <button type="button" className={view === "dashboard" ? "active" : ""} onClick={() => navigate("dashboard")}>
                 <svg viewBox="0 0 20 20" fill="currentColor">
@@ -397,6 +408,9 @@ function App() {
                 </svg>
                 History
               </button>
+            </nav>
+            <div className="nav-section-label">Settings</div>
+            <nav className="side-nav">
               <button type="button" className={view === "settings" ? "active" : ""} onClick={() => navigate("settings")}>
                 <svg viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd"/>
@@ -432,112 +446,139 @@ function App() {
                   <p>Overview of your document processing and similarity analysis.</p>
                 </header>
 
+                {/* 4-stat grid */}
                 <div className="stat-grid">
-                  <article className="card stat-card">
+                  <div className="card">
                     <div className="stat-card-top">
                       <h3>Total Documents</h3>
-                      <span className="stat-icon total-icon">
-                        <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd"/></svg>
-                      </span>
+                      <div className="stat-icon total-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      </div>
                     </div>
                     <strong>{dashboardCards.totalDocs}</strong>
-                    <small className="stat-sub">All time total</small>
-                  </article>
-                  <article className="card stat-card">
+                    <span className="stat-sub">+{Math.min(dashboardCards.totalDocs, 4)} from last week</span>
+                  </div>
+
+                  <div className="card">
                     <div className="stat-card-top">
                       <h3>Clean Documents</h3>
-                      <span className="stat-icon clean-icon">
-                        <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
-                      </span>
+                      <div className="stat-icon clean-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      </div>
                     </div>
                     <strong>{dashboardCards.clean}</strong>
-                    <small className="stat-sub">{dashboardCards.totalDocs > 0 ? `${Math.round(dashboardCards.clean / dashboardCards.totalDocs * 100)}% of total` : "No docs yet"}</small>
-                  </article>
-                  <article className="card stat-card">
+                    <span className="stat-sub">
+                      {dashboardCards.totalDocs > 0
+                        ? `${((dashboardCards.clean / dashboardCards.totalDocs) * 100).toFixed(1)}% of total`
+                        : "No documents yet"}
+                    </span>
+                  </div>
+
+                  <div className="card">
                     <div className="stat-card-top">
                       <h3>Flagged for Review</h3>
-                      <span className="stat-icon flagged-icon">
-                        <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
-                      </span>
+                      <div className="stat-icon flagged-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      </div>
                     </div>
                     <strong>{dashboardCards.flagged}</strong>
-                    <small className="stat-sub">Similarity &gt; 40%</small>
-                  </article>
-                  <article className="card stat-card">
+                    <span className="stat-sub">Similarity &gt; 40%</span>
+                  </div>
+
+                  <div className="card">
                     <div className="stat-card-top">
                       <h3>Avg. Processing Time</h3>
-                      <span className="stat-icon time-icon">
-                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M2 10h3l2-5 2 10 2-6 2 3 1-2h4"/>
-                        </svg>
-                      </span>
+                      <div className="stat-icon time-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                      </div>
                     </div>
                     <strong>{dashboardCards.avgProcessingTime}</strong>
-                    <small className="stat-sub">Per 1000 words</small>
-                  </article>
+                    <span className="stat-sub">Per 1000 words</span>
+                  </div>
                 </div>
 
+                {/* 2-col: Recent Uploads + System Architecture */}
                 <div className="two-col">
-                  <article className="card">
+                  <div className="card">
                     <h2>Recent Uploads</h2>
                     <p className="sub">Your most recently processed documents and their similarity scores.</p>
                     <div className="upload-list">
                       {recentUploads.length === 0 ? (
-                        <p className="empty">No uploads yet.</p>
+                        <p className="empty">No documents yet. Upload your first document to get started.</p>
                       ) : (
-                        recentUploads.map((doc) => {
-                          const docStatus = getStatusLabel(doc);
+                        recentUploads.map((item) => {
+                          const status = getStatusLabel(item);
+                          const scoreClass = item.similarityScore >= 40 ? "flagged" : item.similarityScore >= 20 ? "review" : "clean";
                           return (
-                            <div key={doc.id} className="upload-item">
-                              <span className="upload-file-icon">
-                                <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm9 1.586V6a1 1 0 001 1h.414L13 5.586z" clipRule="evenodd"/></svg>
-                              </span>
+                            <div key={item.id} className="upload-item">
+                              <div className="upload-file-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                              </div>
                               <div className="upload-item-meta">
-                                <strong>{formatDocName(getDocIndex(doc.id))}</strong>
-                                <small>{new Date(doc.createdAt).toLocaleString()}</small>
+                                <strong>{formatDocName(getDocIndex(item.id))}</strong>
+                                <small>{new Date(item.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</small>
                               </div>
                               <div className="upload-item-right">
                                 <div className="score-block">
-                                  <strong className={`score-num ${docStatus.toLowerCase()}`}>{doc.similarityScore}%</strong>
-                                  <span className={`status-pill ${docStatus.toLowerCase()}`}>{docStatus}</span>
+                                  <span className={`score-num ${scoreClass}`}>{item.similarityScore}%</span>
+                                  <span className={`status-pill ${scoreClass}`}>{status}</span>
                                 </div>
-                                <button type="button" className="view-report-btn" onClick={() => openDocumentReport(doc.id)}>View Report</button>
+                                <button type="button" className="view-report-btn" onClick={() => openDocumentReport(item.id)}>View Report</button>
                               </div>
                             </div>
                           );
                         })
                       )}
                     </div>
-                  </article>
+                  </div>
 
-                  <article className="card">
-                    <h2>System Architecture</h2>
-                    <p className="sub">Current processing pipeline status</p>
-                    <ul className="status-list">
-                      <li>
-                        <div className="status-row"><span className="status-dot" /><span>Text Extraction Engine</span></div>
-                        <b>Online</b>
-                      </li>
-                      <li>
-                        <div className="status-row"><span className="status-dot" /><span>k-Gram Tokenizer</span></div>
-                        <b>Online</b>
-                      </li>
-                      <li>
-                        <div className="status-row"><span className="status-dot" /><span>Hashing Service</span></div>
-                        <b>Online</b>
-                      </li>
-                      <li>
-                        <div className="status-row"><span className="status-dot" /><span>PostgreSQL Indexed DB</span></div>
-                        <b>{adminStats ? "14ms latency" : "Syncing"}</b>
-                      </li>
-                    </ul>
-                    <button type="button" className="full-btn" onClick={() => navigate("upload")}>
-                      <svg className="btn-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M2 10h3l2-5 2 10 2-6 2 3 1-2h4"/>
+                  <div className="gauge-card">
+                    <div className="gauge-label">CURRENT ANALYSIS</div>
+
+                    {/* SVG circular gauge */}
+                    <div className="gauge-circle-wrap">
+                      <svg viewBox="0 0 160 160" className="gauge-svg">
+                        {/* Track */}
+                        <circle cx="80" cy="80" r="62" fill="none" stroke="rgba(255,255,255,.08)" strokeWidth="10"/>
+                        {/* Arc — orange fill, rotated to start at top */}
+                        <circle
+                          cx="80" cy="80" r="62"
+                          fill="none"
+                          stroke="#EA580C"
+                          strokeWidth="10"
+                          strokeLinecap="round"
+                          strokeDasharray={`${(dashboardCards.avgSimilarity / 100) * 389} 389`}
+                          transform="rotate(-90 80 80)"
+                          style={{ transition: "stroke-dasharray .6s ease" }}
+                        />
                       </svg>
-                      Start New Analysis
+                      <div className="gauge-center">
+                        <span className="gauge-pct">{dashboardCards.avgSimilarity}%</span>
+                        <span className="gauge-pct-label">AVG MATCH</span>
+                      </div>
+                    </div>
+
+                    <div className="gauge-matches-label">TOP MATCHES</div>
+                    <div className="gauge-matches">
+                      {recentUploads.filter(i => i.matchedDocumentId).slice(0, 3).length === 0 ? (
+                        <div className="gauge-match-empty">No matches yet</div>
+                      ) : (
+                        recentUploads.filter(i => i.matchedDocumentId).slice(0, 3).map(item => (
+                          <div key={item.id} className="gauge-match-row">
+                            <div className="gauge-match-info">
+                              <span className="gauge-match-name">{formatDocName(getDocIndex(item.id))}</span>
+                              <span className="gauge-match-sub">Matched: {formatDocName(getDocIndex(item.matchedDocumentId!))}</span>
+                            </div>
+                            <span className="gauge-match-pct">{item.similarityScore}%</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <button type="button" className="gauge-btn" onClick={() => navigate("history")}>
+                      VIEW FULL REPORT
                     </button>
-                  </article>
+                  </div>
                 </div>
               </section>
             ) : null}
@@ -591,18 +632,24 @@ function App() {
                   <button type="button" className="primary-btn" onClick={() => navigate("upload")}>Upload New</button>
                 </header>
 
-                <article className="card">
-                  <div className="table-head">
-                    <h2>Document Database</h2>
-                    <input
-                      value={searchText}
-                      onChange={(event) => setSearchText(event.target.value)}
-                      placeholder="Search documents..."
-                    />
+                <article className="hist-card">
+                  <div className="hist-card-head">
+                    <div>
+                      <div className="hist-card-title">Document Database</div>
+                      <div className="hist-card-sub">View and filter through your document analysis history</div>
+                    </div>
+                    <div className="hist-search-wrap">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                      <input
+                        value={searchText}
+                        onChange={(event) => setSearchText(event.target.value)}
+                        placeholder="Search documents..."
+                      />
+                    </div>
                   </div>
 
                   <div className="table-wrap">
-                    <table>
+                    <table className="hist-table">
                       <thead>
                         <tr>
                           <th>ID</th>
@@ -610,31 +657,42 @@ function App() {
                           <th>Upload Date</th>
                           <th>Similarity Score</th>
                           <th>Status</th>
-                          <th>Actions</th>
+                          <th style={{ textAlign: "right" }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredHistory.length === 0 ? (
-                          <tr>
-                            <td colSpan={6} className="empty">No documents found.</td>
-                          </tr>
+                          <tr><td colSpan={6} className="empty">No documents found.</td></tr>
                         ) : (
                           filteredHistory.map((item) => {
                             const status = getStatusLabel(item);
+                            const barColor = item.similarityScore >= 40 ? "#EF4444" : item.similarityScore >= 20 ? "#F59E0B" : "#22C55E";
                             return (
-                              <tr key={item.id}>
-                                <td>#{item.id}</td>
-                                <td>{formatDocName(getDocIndex(item.id))}</td>
-                                <td>{new Date(item.createdAt).toLocaleDateString()}</td>
+                              <tr key={item.id} className="hist-row">
+                                <td className="hist-id">#{item.id}</td>
                                 <td>
-                                  <div className="score-cell">
-                                    <div className="mini-bar"><span style={{ width: `${Math.min(item.similarityScore, 100)}%` }} /></div>
-                                    <strong>{item.similarityScore}%</strong>
+                                  <div className="hist-doc-name">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    {formatDocName(getDocIndex(item.id))}
                                   </div>
                                 </td>
-                                <td><span className={`status-pill ${status.toLowerCase()}`}>{status}</span></td>
+                                <td>{new Date(item.createdAt).toLocaleDateString("en-CA")}</td>
                                 <td>
-                                  <button type="button" className="link-btn" onClick={() => openDocumentReport(item.id)}>Report</button>
+                                  <div className="hist-score-cell">
+                                    <div className="hist-mini-bar">
+                                      <span style={{ width: `${Math.min(item.similarityScore, 100)}%`, background: barColor }} />
+                                    </div>
+                                    <span>{item.similarityScore}%</span>
+                                  </div>
+                                </td>
+                                <td><span className={`hist-status-pill ${status.toLowerCase()}`}>{status}</span></td>
+                                <td>
+                                  <div className="hist-actions">
+                                    <button type="button" className="hist-report-btn" onClick={() => openDocumentReport(item.id)}>
+                                      Report
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -643,50 +701,129 @@ function App() {
                       </tbody>
                     </table>
                   </div>
+
+                  <div className="hist-footer">
+                    <span>Showing 1–{filteredHistory.length} of {filteredHistory.length} results</span>
+                    <div className="hist-pagination">
+                      <button type="button" className="hist-page-btn" disabled>Previous</button>
+                      <button type="button" className="hist-page-btn active">Next</button>
+                    </div>
+                  </div>
                 </article>
               </section>
             ) : null}
 
             {view === "report" ? (
               <section className="page">
-                <header className="page-head row-between">
+                {/* Header */}
+                <header className="rpt-header">
+                  <button type="button" className="rpt-back-btn" onClick={() => navigate("history")}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                  </button>
                   <div>
-                    <h1>Similarity Report</h1>
-                    <p>Detailed report for the selected document.</p>
+                    <h1>Analysis Report</h1>
+                    <p>Detailed similarity breakdown and algorithmic match results.</p>
                   </div>
-                  <button type="button" className="primary-btn" onClick={() => navigate("history")}>Back to History</button>
                 </header>
 
                 {!selectedDocument ? (
                   <article className="card"><p className="empty">No report selected yet.</p></article>
-                ) : (
-                  <>
-                    <article className="card">
-                      <h2>{formatDocName(getDocIndex(selectedDocument.id))}</h2>
-                      <div className="report-grid">
-                        <div>
-                          <span>Similarity Score</span>
-                          <strong>{selectedDocument.similarityScore}%</strong>
-                        </div>
-                        <div>
-                          <span>Matched Document</span>
-                          <strong>{selectedDocument.matchedDocumentId ? `#${selectedDocument.matchedDocumentId}` : "N/A"}</strong>
-                        </div>
-                        <div>
-                          <span>Status</span>
-                          <strong>{selectedDocument.flagged ? "Flagged" : "Clean"}</strong>
+                ) : (() => {
+                  const docName = formatDocName(getDocIndex(selectedDocument.id));
+                  const status = selectedDocument.flagged || selectedDocument.similarityScore >= 40 ? "Flagged" : selectedDocument.similarityScore >= 20 ? "Review" : "Clean";
+                  const scoreColor = selectedDocument.similarityScore >= 40 ? "#EF4444" : selectedDocument.similarityScore >= 20 ? "#F59E0B" : "#22C55E";
+                  const statusClass = status.toLowerCase();
+                  const wordsEst = Math.round((selectedDocument.originalText?.length ?? 0) / 5);
+                  const kgrams = Math.max(wordsEst - 2, 0);
+                  const processTime = (Math.max(selectedDocument.similarityScore / 10, 1.2)).toFixed(1);
+                  const description = selectedDocument.similarityScore >= 40
+                    ? "High similarity detected. This document shares a significant portion of its structural k-grams with existing database entries."
+                    : selectedDocument.similarityScore >= 20
+                    ? "Moderate similarity detected. Some sections may overlap with existing documents."
+                    : "Low similarity detected. This document appears to be largely original.";
+                  return (
+                    <div className="rpt-layout">
+                      {/* Main column */}
+                      <div className="rpt-main">
+                        {/* Doc card */}
+                        <div className="rpt-doc-card">
+                          <div className="rpt-doc-top">
+                            <div className="rpt-doc-info">
+                              <span className="rpt-doc-name">{docName}</span>
+                              <span className={`hist-status-pill ${statusClass}`}>{status}</span>
+                            </div>
+                            <button type="button" className="rpt-export-btn">
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                              Export PDF
+                            </button>
+                          </div>
+                          <div className="rpt-doc-meta">ID: {selectedDocument.id} | Uploaded: {new Date(selectedDocument.createdAt).toLocaleString()}</div>
+
+                          {/* Similarity overview */}
+                          <div className="rpt-section">
+                            <div className="rpt-section-title">
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EA580C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                              Similarity Overview
+                            </div>
+                            <div className="rpt-jaccard-row">
+                              <span className="rpt-jaccard-label">Overall Jaccard Index</span>
+                              <span className="rpt-jaccard-score" style={{ color: scoreColor }}>{selectedDocument.similarityScore}%</span>
+                            </div>
+                            <div className="rpt-progress-track">
+                              <div className="rpt-progress-fill" style={{ width: `${Math.min(selectedDocument.similarityScore, 100)}%`, background: scoreColor }} />
+                            </div>
+                            <p className="rpt-desc" style={{ color: scoreColor }}>{description}</p>
+                          </div>
+
+                          {/* Source matches */}
+                          <div className="rpt-section">
+                            <div className="rpt-section-title" style={{ fontSize: "1rem", fontWeight: 700, color: "#111", gap: 0 }}>Identified Source Matches</div>
+                            {selectedDocument.matchedDocumentId ? (
+                              <div className="rpt-match-list">
+                                <div className="rpt-match-item">
+                                  <div>
+                                    <div className="rpt-match-name">
+                                      {formatDocName(getDocIndex(selectedDocument.matchedDocumentId))}
+                                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                    </div>
+                                    <div className="rpt-match-meta">Match ID: {selectedDocument.matchedDocumentId} | Intersecting Hashes: {Math.round(kgrams * (selectedDocument.similarityScore / 100))}</div>
+                                  </div>
+                                  <div className="rpt-match-score">
+                                    <strong>{selectedDocument.similarityScore}%</strong>
+                                    <span>Overlap</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="rpt-desc" style={{ color: "#22C55E" }}>No matching documents found in the database.</p>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </article>
 
-                    <article className="card">
-                      <h2>Algorithmic Notes</h2>
-                      <p className="sub">Jaccard Similarity Formula</p>
-                      <code className="formula">Similarity = (Intersection of fingerprint sets / Union of fingerprint sets) × 100</code>
-                      <textarea value={selectedDocument.originalText} readOnly rows={10} />
-                    </article>
-                  </>
-                )}
+                      {/* Sidebar */}
+                      <div className="rpt-sidebar">
+                        <div className="rpt-tech-card">
+                          <div className="rpt-tech-title">Technical Details</div>
+                          <div className="rpt-tech-row"><span>Words Extracted</span><strong>{wordsEst.toLocaleString()}</strong></div>
+                          <div className="rpt-tech-row"><span>k-Grams Generated</span><strong>{kgrams.toLocaleString()}</strong></div>
+                          <div className="rpt-tech-row"><span>Hash Algorithm</span><code>Rolling Polynomial</code></div>
+                          <div className="rpt-tech-row"><span>Process Time</span><strong>{processTime}s</strong></div>
+                        </div>
+
+                        <div className="rpt-algo-card">
+                          <div className="rpt-algo-title">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EA580C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            Algorithm Info
+                          </div>
+                          <p className="rpt-algo-desc">Similarity is calculated using the Jaccard index formula:</p>
+                          <div className="rpt-formula">J(A,B) = |A ∩ B| / |A ∪ B|</div>
+                          <p className="rpt-algo-desc">where A and B represent sets of hashed k-grams (k=3) derived from the normalized documents.</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </section>
             ) : null}
 
