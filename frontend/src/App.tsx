@@ -41,7 +41,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [historyFilter, setHistoryFilter] = useState<"all" | "high" | "clean">("all");
+  const [_historyFilter, _setHistoryFilter] = useState<"all" | "high" | "clean">("all");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const isAuthenticated = Boolean(token);
